@@ -28,6 +28,7 @@ import sys, os
 extensions = [
     'hieroglyph',
     'sphinx.ext.doctest',
+    'sphinxcontrib.googleanalytics',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -255,3 +256,8 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+# -- Google Analytics -----------------------------------------------------------
+
+googleanalytics_enabled = True
+googleanalytics_id = 'UA-188298-2'
