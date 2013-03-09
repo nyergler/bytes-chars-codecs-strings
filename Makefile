@@ -6,6 +6,9 @@ SPHINXOPTS    =
 SPHINXBUILD   = ./bin/sphinx-build
 PAPER         =
 BUILDDIR      = _build
+UPLOADTARGET  = http://yergler.net/2012/bytes-chars/
+UPLOADHOST    = core
+UPLOADPATH    = /var/www/yergler.net/www/2012/bytes-chars/
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -14,7 +17,7 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
-.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext
+.PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext all upload
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -157,3 +160,10 @@ slides:
 	@echo "Build finished. The HTML slides are in $(BUILDDIR)/slides."
 
 html+slides: html slides
+
+all: clean html
+
+upload:
+	@echo
+	@echo "Updating $(UPLOADTARGET)"
+	rsync -rv _build/* $(UPLOADHOST):$(UPLOADPATH)
