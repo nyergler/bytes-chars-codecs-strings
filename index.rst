@@ -80,7 +80,7 @@ A bit of history:
   coding system -- not a lot.
 * The code pages worked fine for some applications -- if you were
   writing a French document you'd use Latin-1, and if you were writing
-  in Russian you'd you KOI8, but what if your French document needed
+  in Russian you'd use KOI8, but what if your French document needed
   to quote Russian?
 * Unicode started out with 16 bit characters instead of 8, but has
   since expanded the code space.
@@ -103,7 +103,7 @@ Note that you can only address characters by name in Unicode strings.
   \N{GREEK CAPITAL LETTER DELTA}
 
 
-So is a character the same as a byte? Not example. Some bytes are
+So is a character the same as a byte? Not exactly. Some bytes are
 characters and some characters are a single byte, but not all bytes
 are characters and not all characters are a single byte.
 
@@ -222,10 +222,9 @@ including ASCII, UTF-8, UTF-16, and Latin-1. These are available in
 the cunningly named codecs_ package. Codecs also includes a set of
 "artificial" codecs for encoding and decoding formats such as base-64.
 
-Callings ``encode`` or ``decode`` is the equivalent of asking Python
-to load a particular codec and use its ``encode`` or ``decode``
-method. You can ask for a specific codec by specifying it by name or
-class::
+Calling ``encode`` or ``decode`` is the equivalent of asking Python to
+load a particular codec and use its ``encode`` or ``decode`` method.
+You can ask for a specific codec by specifying it by name or class::
 
   >>> "Encoded Bytes".decode('utf-8')
   u"Encoded Bytes"
