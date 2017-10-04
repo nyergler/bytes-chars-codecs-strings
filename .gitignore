@@ -7,3 +7,4 @@ parts/
 *.pyo
 
 _build/
+.vscode
