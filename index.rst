@@ -2,12 +2,6 @@
  Bytes, Characters, Codecs, and Strings
 ========================================
 
-.. note::
-
-   This document was prepared for presentation to the engineering team
-   at Eventbrite. It is currently under development; please send
-   suggestions to ``nathan+i18n@yergler.net``.
-
 If you've worked with Python 2 for long, you've undoubtedly
 encountered Unicode strings. Whether you've known what the little
 ``u`` preceding the string declaration actually meant -- and more
