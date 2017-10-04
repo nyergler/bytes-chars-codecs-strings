@@ -1,0 +1,414 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Bytes, Characters, Codecs, and Strings &#8212; Bytes, Characters, Codecs, &amp; Strings 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="bytes-characters-codecs-and-strings">
+<h1>Bytes, Characters, Codecs, and Strings<a class="headerlink" href="#bytes-characters-codecs-and-strings" title="Permalink to this headline">¶</a></h1>
+<p>If you’ve worked with Python 2 for long, you’ve undoubtedly
+encountered Unicode strings. Whether you’ve known what the little
+<code class="docutils literal"><span class="pre">u</span></code> preceding the string declaration actually meant – and more
+importantly what it meant you had to do when you started working with
+that variable – is another question. For the first few years I worked
+with Unicode in Python, I knew just enough to keep things from blowing
+up, but I didn’t really understand the underlying concepts or data
+structures. The goal of this document is to help engineers understand
+Unicode in Python, so they can write code confidently and test for the
+sort of cases users are likely to encounter.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Throughout this document, when I refer to “Python”, I’m referring
+to Python 2.6. Python 3 attempts to simplify some things related to
+handling Unicode. This is covered later, and when I refer to Python
+3, I’ll explicitly mention the version.</p>
+</div>
+<div class="section" id="an-introduction-to-strings">
+<h2>An Introduction to Strings<a class="headerlink" href="#an-introduction-to-strings" title="Permalink to this headline">¶</a></h2>
+<p>First, some context. Python has two types of strings: byte strings and
+Unicode strings. When we put a sequence of letters in quotes, we’re
+usually getting a byte string.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Nathan&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">name</span>
+<span class="go">&#39;Nathan&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">name</span>
+<span class="go">Nathan</span>
+</pre></div>
+</div>
+<p>Literally, a sequence of bytes. When you type characters that can’t be
+expressed in a single byte, you’ll see they’re stored differently than
+they’re displayed, and this is where it gets interesting.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span> <span class="o">=</span> <span class="s2">&quot;ç&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span>
+<span class="go">&#39;\xc3\xa7&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">multibyte</span>
+<span class="go">ç</span>
+</pre></div>
+</div>
+<p>If you prefix the quotes with a lowercase <code class="docutils literal"><span class="pre">u</span></code>, Python creates a
+Unicode string. A Unicode string is a sequence of characters, or more
+specifically Unicode code points.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">unicode_name</span> <span class="o">=</span> <span class="sa">u</span><span class="s2">&quot;Nathan&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">unicode_name</span>
+<span class="go">u&#39;Nathan&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">unicode_name</span>
+<span class="go">Nathan</span>
+</pre></div>
+</div>
+<p>Of course you can use the extended characters with Unicode strings,
+too, but you’ll notice they look a little different.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">umultibyte</span> <span class="o">=</span> <span class="sa">u</span><span class="s2">&quot;ç&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">umultibyte</span>
+<span class="go">u&#39;\xe7&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">umultibyte</span>
+<span class="go">ç</span>
+</pre></div>
+</div>
+<p>A bit of history:</p>
+<ul class="simple">
+<li>ASCII was standardized in 1968: 7 bits per character, 127 characters</li>
+<li>By the 1980s, almost all personal computers were 8 bits, so you had
+an additional 128 characters to work with. Different manufacturers
+and different operating systems assigned different characters to
+these extras positions, but that’s still only 255 characters in a
+coding system – not a lot.</li>
+<li>The code pages worked fine for some applications – if you were
+writing a French document you’d use Latin-1, and if you were writing
+in Russian you’d use KOI8, but what if your French document needed
+to quote Russian?</li>
+<li>Unicode started out with 16 bit characters instead of 8, but has
+since expanded the code space.</li>
+</ul>
+<p>Unicode defines characters, called code points, for each character or
+glyph. These have names and numbers, which you can use to address
+specific code points.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">codepoint</span> <span class="o">=</span> <span class="sa">u</span><span class="s2">&quot;</span><span class="se">\N{ETHIOPIC SYLLABLE WI}</span><span class="s2">&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">codepoint</span>
+<span class="go">u&#39;\u12ca&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">codepoint</span>
+<span class="go">ዊ</span>
+</pre></div>
+</div>
+<p>Note that you can only address characters by name in Unicode strings.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="sa">u</span><span class="s2">&quot;</span><span class="se">\N{GREEK CAPITAL LETTER DELTA}</span><span class="s2">&quot;</span>
+<span class="go">Δ</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\N{GREEK CAPITAL LETTER DELTA}</span><span class="s2">&quot;</span>
+<span class="go">\N{GREEK CAPITAL LETTER DELTA}</span>
+</pre></div>
+</div>
+<p>So is a character the same as a byte? Not exactly. Some bytes are
+characters and some characters are a single byte, but not all bytes
+are characters and not all characters are a single byte.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Not every Unicode code point requires the same amount of space to
+represent: some fit in one byte, some require up to four. Prior to
+Python 3.3, Python has a fixed size it allocated for each character
+in a Unicode string, which was defined at compile time.</p>
+<p>When dealing with C extension modules, this is an issue: an
+extension module compiled to expect 2 byte Unicode (UCS-2) won’t
+work with an interpreter compiled for 4 byte Unicode (UCS-4).</p>
+<p>You can tell which your site uses by looking at
+<code class="docutils literal"><span class="pre">sys.maxunicode</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sys</span><span class="o">.</span><span class="n">maxunicode</span>
+<span class="go">65535</span>
+</pre></div>
+</div>
+<p class="last">Those of you into Python packaging may remember the brief
+flirtation with binary eggs: this mismatch was a huge pain point
+with deploying binary eggs.</p>
+</div>
+</div>
+<div class="section" id="comparing-unicode-byte-strings">
+<h2>Comparing Unicode &amp; Byte Strings<a class="headerlink" href="#comparing-unicode-byte-strings" title="Permalink to this headline">¶</a></h2>
+<p>Comparisons of Unicode and byte strings are sort of interesting;
+sometimes it works, sometimes it doesn’t.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">name</span> <span class="o">==</span> <span class="n">unicode_name</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span> <span class="o">==</span> <span class="n">umultibyte</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>The latter comparison actually throws a <code class="docutils literal"><span class="pre">UnicodeWarning</span></code>, which
+we’ll talk about later.</p>
+<p>Both Unicode and byte strings are immutable: when you create the
+instance in memory, it’s fixed; any reassignment or alteration will
+create a new string object. This means you can safely use string
+objects as default values for keyword arguments, or as class level
+attributes.</p>
+</div>
+<div class="section" id="converting-between-string-types">
+<h2>Converting between String types<a class="headerlink" href="#converting-between-string-types" title="Permalink to this headline">¶</a></h2>
+<p>Python provides a rich and dynamic type system that tries to stay out
+of your way by implicitly converting types. For example, when you add
+an integer and a float together, the integer is first converted to a
+floating point value. This conversion happens according to the
+<a class="reference external" href="http://docs.python.org/2/reference/datamodel.html#the-standard-type-hierarchy">type hierarchy</a>.</p>
+<p>This type hierarchy applies when it comes to string types, as well:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;Bytes&quot;</span> <span class="o">+</span> <span class="s2">&quot; and &quot;</span> <span class="o">+</span>  <span class="sa">u</span><span class="s2">&quot;Unicode&quot;</span>
+<span class="go">u&quot;Bytes and Unicode&quot;</span>
+</pre></div>
+</div>
+<p>It also happens when you perform string formatting, if any of the
+participants are a Unicode string:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> and </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;Bytes&quot;</span><span class="p">,</span> <span class="sa">u</span><span class="s2">&quot;Unicode&quot;</span><span class="p">)</span>
+<span class="go">u&quot;Bytes and Unicode&quot;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="sa">u</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> and </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;Bytes&quot;</span><span class="p">,</span> <span class="s2">&quot;Unicode&quot;</span><span class="p">)</span>
+<span class="go">u&quot;Bytes and Unicode&quot;</span>
+</pre></div>
+</div>
+<p>But what if you want to explicitly convert between byte and Unicode
+strings? The classes for Unicode and byte strings, <code class="docutils literal"><span class="pre">unicode</span></code> and
+<code class="docutils literal"><span class="pre">str</span></code>, also provide support for explicit casts from one type to
+another:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="sa">u</span><span class="s2">&quot;Unicode&quot;</span><span class="p">)</span>
+<span class="go">&quot;Unicode&quot;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">unicode</span><span class="p">(</span><span class="s2">&quot;Bytes&quot;</span><span class="p">)</span>
+<span class="go">u&quot;Bytes&quot;</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Calling these directly is <strong>not recommended</strong>: in almost all cases
+it results in brittle code.</p>
+</div>
+<p>Since Python 2.3, both <code class="docutils literal"><span class="pre">str</span></code> and <code class="docutils literal"><span class="pre">unicode</span></code> subclass the abstract
+type <code class="docutils literal"><span class="pre">basestring</span></code>. <code class="docutils literal"><span class="pre">basestring</span></code> provides two methods for
+explicitly converting between string types: <code class="docutils literal"><span class="pre">encode</span></code>, and
+<code class="docutils literal"><span class="pre">decode</span></code>.</p>
+<p>Calling <code class="docutils literal"><span class="pre">encode</span></code> on any string type results in a byte-encoded
+string:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="sa">u</span><span class="s2">&quot;Unicode&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="go">&quot;Unicode&quot;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;Not Unicode&quot;</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="go">&quot;Not Unicode&quot;</span>
+</pre></div>
+</div>
+<p>Conversely, calling <code class="docutils literal"><span class="pre">decode</span></code> results in a Unicode string:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;Not Unicode&quot;</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+<span class="go">u&quot;Not Unicode&quot;</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="sa">u</span><span class="s2">&quot;Unicode&quot;</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+<span class="go">u&quot;Unicode&quot;</span>
+</pre></div>
+</div>
+<p>But if not all bytes map to a single character, and byte strings may
+contain <em>encoded</em> characters, how does Python go about handling that
+conversion? The answer is <strong>Codecs</strong>.</p>
+<p>Generally speaking, a codec is a Python class that can encode Python
+Unicode characters to bytes and decode them back to Unicode
+characters. Python ships with a set of <a class="reference external" href="http://docs.python.org/2/library/codecs.html#standard-encodings">standard encodings</a>,
+including ASCII, UTF-8, UTF-16, and Latin-1. These are available in
+the cunningly named <a class="reference external" href="http://docs.python.org/2/library/codecs.html">codecs</a> package. Codecs also includes a set of
+“artificial” codecs for encoding and decoding formats such as base-64.</p>
+<p>Calling <code class="docutils literal"><span class="pre">encode</span></code> or <code class="docutils literal"><span class="pre">decode</span></code> is the equivalent of asking Python to
+load a particular codec and use its <code class="docutils literal"><span class="pre">encode</span></code> or <code class="docutils literal"><span class="pre">decode</span></code> method.
+You can ask for a specific codec by specifying it by name or class:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;Encoded Bytes&quot;</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="go">u&quot;Encoded Bytes&quot;</span>
+</pre></div>
+</div>
+<p>Of course, not all codecs can encode all characters, and bytes encoded
+using one codec can not be reliably decoded using a different codec.
+Take our earlier multibyte example.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span>
+<span class="go">&#39;\xc3\xa7&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">unicode</span><span class="p">(</span><span class="n">multibyte</span><span class="p">)</span>
+<span class="go">UnicodeDecodeError: &#39;ascii&#39; codec can&#39;t decode byte 0xc3 in position 0: ordinal not in range(128)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+<span class="go">UnicodeDecodeError: &#39;ascii&#39; codec can&#39;t decode byte 0xc3 in position 0: ordinal not in range(128)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+<span class="go">u&#39;\xe7&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">multibyte</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="n">umultibyte</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<div class="section" id="the-default-encoding">
+<h3>The Default Encoding<a class="headerlink" href="#the-default-encoding" title="Permalink to this headline">¶</a></h3>
+<p>When you omit the codec, Python uses the system default codec. When
+you install Python, this is depressingly set to the lowest common
+denominator:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sys</span><span class="o">.</span><span class="n">getdefaultencoding</span><span class="p">()</span>
+<span class="go">&#39;ascii&#39;</span>
+</pre></div>
+</div>
+<p>So if there’s a <code class="docutils literal"><span class="pre">getdefaultencoding</span></code> is there also a
+<code class="docutils literal"><span class="pre">setdefaultencoding</span></code>?</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sys</span><span class="o">.</span><span class="n">setdefaultencoding</span>
+<span class="gt">Traceback (most recent call last):</span>
+  File <span class="nb">&quot;&lt;stdin&gt;&quot;</span>, line <span class="m">1</span>, in <span class="n">&lt;module&gt;</span>
+<span class="gr">AttributeError</span>: <span class="n">&#39;module&#39; object has no attribute &#39;setdefaultencoding&#39;</span>
+</pre></div>
+</div>
+<p>That’s sort of a bummer. But if we look in the Python library
+documentation, we see <code class="docutils literal"><span class="pre">setdefaultencoding</span></code> is clearly listed there.</p>
+<div class="section" id="a-brief-digression-into-python-startup">
+<h4>A brief digression into Python startup<a class="headerlink" href="#a-brief-digression-into-python-startup" title="Permalink to this headline">¶</a></h4>
+<p>When Python starts up, it imports a few modules. One of these is
+<code class="docutils literal"><span class="pre">site.py</span></code>. <a class="reference external" href="http://docs.python.org/2/library/site.html">site.py</a> is responsible for setting up the Python
+“site”, or installation. It does a few things, including adding the
+paths for <code class="docutils literal"><span class="pre">site-packages</span></code> and loading any <code class="docutils literal"><span class="pre">pth</span></code> files. The final
+step is loading <code class="docutils literal"><span class="pre">sitecustomize.py</span></code>, loading <code class="docutils literal"><span class="pre">usercustomize.py</span></code>
+(new in Python 2.6), and, the answer to our mystery:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Remove sys.setdefaultencoding() so that users cannot change the</span>
+<span class="c1"># encoding after initialization.  The test for presence is needed when</span>
+<span class="c1"># this module is run as a script, because this code is executed twice.</span>
+<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s2">&quot;setdefaultencoding&quot;</span><span class="p">):</span>
+    <span class="k">del</span> <span class="n">sys</span><span class="o">.</span><span class="n">setdefaultencoding</span>
+</pre></div>
+</div>
+<p>So you <em>can</em> customize the default encoding for your Python site, but
+you need to do it in <code class="docutils literal"><span class="pre">sitecustomize.py</span></code> or <code class="docutils literal"><span class="pre">usercustomize.py</span></code> (if
+enabled). Changing the default encoding after initialization is
+considered unsafe.</p>
+</div>
+</div>
+<div class="section" id="implicit-encodes-and-decodes">
+<h3>Implicit Encodes and Decodes<a class="headerlink" href="#implicit-encodes-and-decodes" title="Permalink to this headline">¶</a></h3>
+<p>From what we’ve seen, it <em>looks</em> like if your application is working
+with a single codec – say, UTF-8 – you can safely call
+<code class="docutils literal"><span class="pre">.decode('utf-8')</span></code> and <code class="docutils literal"><span class="pre">.encode('utf-8')</span></code> on anything to get the
+type you want. Not exactly. Consider the following example.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span> <span class="o">=</span> <span class="sa">u</span><span class="s2">&quot;</span><span class="se">\N{GREEK CAPITAL LETTER DELTA}</span><span class="s2">&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">delta</span>
+<span class="go">Δ</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="go">UnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode character u&#39;\u0394&#39; in position 0: ordinal not in range(128)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+<span class="go">&#39;\xce\x94&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span>
+<span class="go">UnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode character u&#39;\u0394&#39; in position 0: ordinal not in range(128)</span>
+</pre></div>
+</div>
+<p>So what’s going on here? We’re calling <code class="docutils literal"><span class="pre">decode</span></code> – which should give
+us a Unicode string – on an existing Unicode string. And we’re
+specifying a codec that we know can handle the contents of the string.
+There are two interesting things about this exception:</p>
+<ul class="simple">
+<li>It’s an <em>Encoding</em> error, when we’re trying to <em>decode</em></li>
+<li>It refers to ASCII, when we’ve clearly specified UTF-8</li>
+</ul>
+<p>The problem is this: <code class="docutils literal"><span class="pre">decode</span></code> only operates on byte strings. If it’s
+called on something other than a byte string, it has to get it to
+bytes first. How does it get to bytes? By encoding, of course [I’m
+lying a little bit here, but not much.] And what’s the default
+encoding? ASCII!</p>
+<p>So this is a case where calling <code class="docutils literal"><span class="pre">decode</span></code> actually contains an
+implicit call to <code class="docutils literal"><span class="pre">encode</span></code>, not what you want.</p>
+</div>
+<div class="section" id="dealing-with-errors">
+<h3>Dealing with Errors<a class="headerlink" href="#dealing-with-errors" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal"><span class="pre">encode</span></code> and <code class="docutils literal"><span class="pre">decode</span></code> methods also take an <code class="docutils literal"><span class="pre">errors</span></code>
+argument. This allows you to customize how errors are dealt with
+during encoding and decoding.</p>
+<p>The default value of <code class="docutils literal"><span class="pre">errors</span></code> is <code class="docutils literal"><span class="pre">strict</span></code>, which throws an
+exception when encountering data that can not be encoded or decoded.
+Other options include <code class="docutils literal"><span class="pre">replace</span></code> and <code class="docutils literal"><span class="pre">ignore</span></code>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span> <span class="o">=</span> <span class="sa">u</span><span class="s2">&quot;</span><span class="se">\N{GREEK CAPITAL LETTER DELTA}</span><span class="s2">&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span> <span class="n">delta</span>
+<span class="go">Δ</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<span class="go">UnicodeEncodeError: &#39;ascii&#39; codec can&#39;t encode character u&#39;\u0394&#39; in position 0: ordinal not in range(128)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+<span class="go">&#39;&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">delta</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+<span class="go">&#39;?&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="strings-and-objects">
+<h2>Strings and Objects<a class="headerlink" href="#strings-and-objects" title="Permalink to this headline">¶</a></h2>
+<p>Thus far we’ve dealt only with string types. What about handling
+conversion to byte strings or Unicode strings for other types? Most
+Python developers are familiar with the special method <code class="docutils literal"><span class="pre">__str__</span></code>.
+Any Python class can define <code class="docutils literal"><span class="pre">__str__</span></code> to provide a byte string
+representation of itself. Types can also define a <code class="docutils literal"><span class="pre">__unicode__</span></code>
+method which should return a Unicode string.</p>
+<p>Note that calling <code class="docutils literal"><span class="pre">decode</span></code> on a string object implicitly calls
+<code class="docutils literal"><span class="pre">__unicode__</span></code>. This allows sub-classes to modify the encoding and
+decoding behavior.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In addition to <code class="docutils literal"><span class="pre">__str__</span></code> and <code class="docutils literal"><span class="pre">__unicode__</span></code>, Python uses
+<code class="docutils literal"><span class="pre">__repr__</span></code> to provide a “representation” of an object.
+<code class="docutils literal"><span class="pre">__repr__</span></code> is used in contexts such as logging where it is <em>very
+important</em> that it not raise an exception.</p>
+</div>
+<p>If you want to provide robust support for custom encoding and decoding
+behavior, your subclass should also override __add__ and __radd__,
+which are called for concatentation, and <code class="docutils literal"><span class="pre">__mod__</span></code> – literally the
+modulus operator – which is called for string formatting.</p>
+</div>
+<div class="section" id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Use <code class="docutils literal"><span class="pre">encode</span></code> and <code class="docutils literal"><span class="pre">decode</span></code> with explicit encodings</li>
+<li>Avoid implicit encodes and decodes that occur when calling <code class="docutils literal"><span class="pre">str</span></code>,
+<code class="docutils literal"><span class="pre">unicode</span></code>, or calling <code class="docutils literal"><span class="pre">encode</span></code> on a byte string.</li>
+<li>Use <code class="docutils literal"><span class="pre">django.utils.encoding.smart_str</span></code>, <code class="docutils literal"><span class="pre">smart_unicode</span></code> from
+within Django</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2012, Nathan R. Yergler.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
